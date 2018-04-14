@@ -26,7 +26,7 @@ let convertToMP3 = (path) => new Promise((resolve, reject) => {
     .on('error', err => reject(err))
 })
 
-let applyTags = (path, tags) => {
+let applyTags = (path, tags) => new Promise((resolve, reject) => {
   fetch(tags['cover'])
     .then(data => data.buffer())
     .then(artBuffer => {
@@ -50,25 +50,33 @@ let applyTags = (path, tags) => {
       fs.writeFileSync(tmp, Buffer.from(writer.arrayBuffer))
       fs.unlinkSync(path)
       fs.renameSync(tmp, path)
+      resolve(path)
     })
-}
+    .catch(err => reject(err))
+})
 
 let download = (track) => new Promise((resolve, reject) => {
   let dir = `./downloads/${track['artist_name']}/${track['album_name']}/`
   let path = `${dir}/${track['track_name']}.mp3`
-  console.log(`downloading ${path}`)
-  mkdirp.sync(dir)
-  ytdl(track['youtube_link'], OPTS)
-    .pipe(fs.createWriteStream(path))
-    .on('finish', () => {
-      console.log('converting to mp3...')
-      convertToMP3(path)
-        .then(path => {
-          console.log('applying tags...')
-          applyTags(path, track)
-        })
-    })
-    .on('error', err => reject(err))
+  if (!fs.existsSync(path)) {
+    console.log(`downloading ${path} (${track['youtube_link']})`)
+    mkdirp.sync(dir)
+    ytdl(track['youtube_link'], OPTS)
+      .pipe(fs.createWriteStream(path))
+      .on('finish', () => {
+        console.log('converting to mp3...')
+        convertToMP3(path)
+          .then(path => {
+            console.log('applying tags...')
+            applyTags(path, track)
+              .then(_ => resolve(path))
+              .catch(err => reject(err))
+          })
+      })
+      .on('error', err => reject(err))
+    } else {
+      resolve(path)
+    }
 })
 
 spotify.modifyCSV('./playlist.csv')
