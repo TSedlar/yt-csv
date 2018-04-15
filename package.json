@@ -4,7 +4,8 @@
   "description": "Downloads songs identified on youtube matching a CSV file",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "spotify": "node index.js spotify",
+    "youtube": "node index.js youtube"
   },
   "directories": {
     "lib": "lib"
@@ -12,6 +13,7 @@
   "dependencies": {
     "browser-id3-writer": "^4.0.0",
     "cheerio": "^1.0.0-rc.2",
+    "del": "^3.0.0",
     "fast-csv": "^2.4.1",
     "ffmpeg-static": "^2.2.1",
     "fluent-ffmpeg": "^2.1.2",

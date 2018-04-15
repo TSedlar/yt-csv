@@ -1,3 +1,4 @@
+const reader = require('./lib/csv-reader')
 const spotify = require('./lib/spotify')
 const ytdl = require('ytdl-core')
 const fs = require('fs')
@@ -5,6 +6,7 @@ const ffmpeg = require('fluent-ffmpeg')
 const ID3Writer = require('browser-id3-writer')
 const fetch = require('node-fetch')
 const mkdirp = require('mkdirp')
+const del = require('del')
 
 const FFMPEG_PATH = require('ffmpeg-static').path
 const OPTS = {
@@ -19,7 +21,7 @@ let convertToMP3 = (path) => new Promise((resolve, reject) => {
   return ffmpeg(path).outputOptions('-c:a', 'mp3')
     .save(tmp)
     .on('end', () => {
-      fs.unlinkSync(path)
+      del.sync([path], { force: true })
       fs.renameSync(tmp, path)
       resolve(path)
     })
@@ -48,7 +50,7 @@ let applyTags = (path, tags) => new Promise((resolve, reject) => {
       writer.addTag()
       let tmp = path.replace('.mp3', '.bak.mp3')
       fs.writeFileSync(tmp, Buffer.from(writer.arrayBuffer))
-      fs.unlinkSync(path)
+      del.sync([path], { force: true })
       fs.renameSync(tmp, path)
       resolve(path)
     })
@@ -79,13 +81,24 @@ let download = (track) => new Promise((resolve, reject) => {
     }
 })
 
-spotify.modifyCSV('./playlist.csv')
-  .then(songs => {
-    // console.log(songs)
-    let promises = []
-    for (song of songs) {
-      promises.push(download(song))
-    }
-    return Promise.all(promises)
-  })
-  .catch(err => console.log(err))
+let downloadSongs = (songs) => {
+  let promises = []
+  for (song of songs) {
+    promises.push(download(song))
+  }
+  return Promise.all(promises)
+}
+
+let type = process.argv[2]
+
+if (type === 'spotify') {
+  console.log('using spotify.csv')
+  spotify.modifyCSV('./spotify.csv')
+    .then(songs => downloadSongs(songs))
+    .catch(err => console.log(err))
+} else if (type === 'youtube') {
+  console.log('using youtube.csv')
+  reader('./youtube.csv')
+    .then(songs => downloadSongs(songs))
+    .catch(err => console.log(err))
+}

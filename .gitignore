@@ -1,4 +1,5 @@
 node_modules/
 downloads/
-playlist.csv
+spotify.csv
+youtube.csv
 youtube-key.txt
